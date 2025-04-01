@@ -1,20 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "~/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
 import { Calendar } from "~/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -42,9 +52,10 @@ const formSchema = z.object({
   due_date: z.date().nullable().optional(),
   // For now, we'll use a fixed creator_id since we don't have auth yet
   creator_id: z.string().uuid(),
-  assignee_id: z.union([z.string().uuid(), z.literal("unassigned")]).transform(val => 
-    val === "unassigned" ? null : val
-  ),
+  assignee_id: z
+    .union([z.string().uuid(), z.literal("unassigned")])
+    .transform((val) => (val === "unassigned" ? null : val))
+    .nullable(),
 });
 
 // Define the type for the form values
@@ -77,14 +88,16 @@ interface AddTaskDialogProps {
 
 export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
   const [open, setOpen] = useState(false);
-  
+
   // Get users for assignee dropdown
   const usersQuery = api.user.find.useQuery();
-  const users = (usersQuery.data ?? []) as User[];
-  
+  const users = useMemo(
+    () => usersQuery.data ?? [],
+    [usersQuery.data],
+  ) as User[];
+
   // Create form instance
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
@@ -96,18 +109,19 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
       creator_id: users[0]?.id ?? "",
       assignee_id: "unassigned",
     },
+    resolver: zodResolver(formSchema),
   });
-  
+
   // Update the form when users are loaded
   useEffect(() => {
     if (users.length > 0 && !form.getValues("creator_id")) {
       form.reset({
         ...form.getValues(),
-        creator_id: users[0]?.id ?? ""
+        creator_id: users[0]?.id ?? "",
       });
     }
   }, [users, form]);
-  
+
   // Create task mutation
   const utils = api.useUtils();
   const createTaskMutation = api.todo.create.useMutation({
@@ -123,13 +137,13 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
     onError: (error) => {
       console.error("Error creating task:", error);
       alert("Failed to create task. Please try again.");
-    }
+    },
   });
-  
+
   // Handle form submission
   const onSubmit: SubmitHandler<TaskFormValues> = (values) => {
     console.log("Form submission values:", values);
-    
+
     // Format dates for the backend
     const formattedValues: CreateTodoFormattedValues = {
       name: values.name,
@@ -145,7 +159,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
     console.log("Formatted values for submission:", formattedValues);
     createTaskMutation.mutate(formattedValues);
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -158,9 +172,12 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
         <DialogHeader>
           <DialogTitle>Add New Task</DialogTitle>
         </DialogHeader>
-        
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="grid gap-4 py-4"
+          >
             {/* Task Name */}
             <FormField
               control={form.control}
@@ -175,7 +192,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             {/* Description */}
             <FormField
               control={form.control}
@@ -184,10 +201,10 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Task description" 
-                      className="resize-none" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Task description"
+                      className="resize-none"
+                      {...field}
                       value={field.value ?? ""}
                       onChange={(e) => field.onChange(e.target.value || null)}
                     />
@@ -196,7 +213,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             {/* Priority and Status in a row */}
             <div className="grid grid-cols-2 gap-4">
               {/* Priority */}
@@ -206,8 +223,8 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -225,7 +242,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                   </FormItem>
                 )}
               />
-              
+
               {/* Status */}
               <FormField
                 control={form.control}
@@ -233,8 +250,8 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
+                    <Select
+                      onValueChange={field.onChange}
                       defaultValue={field.value}
                     >
                       <FormControl>
@@ -254,7 +271,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 )}
               />
             </div>
-            
+
             {/* Story Points and Due Date in a row */}
             <div className="grid grid-cols-2 gap-4">
               {/* Story Points */}
@@ -265,19 +282,23 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                   <FormItem>
                     <FormLabel>Story Points</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="Story points" 
-                        {...field} 
+                      <Input
+                        type="number"
+                        placeholder="Story points"
+                        {...field}
                         value={field.value ?? ""}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value ? Number(e.target.value) : null,
+                          )
+                        }
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               {/* Due Date */}
               <FormField
                 control={form.control}
@@ -295,7 +316,9 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                             {field.value ? (
                               format(field.value, "PPP")
                             ) : (
-                              <span className="text-muted-foreground">Pick a date</span>
+                              <span className="text-muted-foreground">
+                                Pick a date
+                              </span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -315,7 +338,7 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 )}
               />
             </div>
-            
+
             {/* Assignee */}
             <FormField
               control={form.control}
@@ -323,8 +346,8 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Assignee</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     value={field.value ?? "unassigned"}
                   >
                     <FormControl>
@@ -345,19 +368,16 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter className="mt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setOpen(false)}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                disabled={createTaskMutation.isPending}
-              >
+              <Button type="submit" disabled={createTaskMutation.isPending}>
                 {createTaskMutation.isPending ? "Saving..." : "Save Task"}
               </Button>
             </DialogFooter>
@@ -366,4 +386,4 @@ export function AddTaskDialog({ onTaskAdded }: AddTaskDialogProps) {
       </DialogContent>
     </Dialog>
   );
-} 
+}

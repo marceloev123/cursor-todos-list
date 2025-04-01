@@ -1,34 +1,25 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, 
-   @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument */
 import Head from "next/head";
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "~/components/ui/table";
 import { Input } from "~/components/ui/input";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { ThemeToggle } from "~/components/theme/theme-toggle";
-import { 
-  PlusCircle, 
-  MoreVertical, 
-  Pencil, 
-  Trash2, 
+import {
+  MoreVertical,
+  Pencil,
+  Trash2,
   CheckCircle2,
-  Calendar,
-  Clock,
-  User,
-  ListFilter,
   SlidersHorizontal,
   Search,
-  X
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,20 +30,19 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "~/components/ui/dropdown-menu";
-import { Checkbox } from "~/components/ui/checkbox";
 
 import { api } from "~/utils/api";
 import { AddTaskDialog } from "~/components/task/add-task-dialog";
 import type { Database } from "database.types";
 
 // Define todo type based on the database schema
-type Todo = Database["public"]["Tables"]["todos"]["Row"];
+export type Todo = Database["public"]["Tables"]["todos"]["Row"];
 
 // Define user type based on the database schema
-type User = Database["public"]["Tables"]["users"]["Row"];
+export type User = Database["public"]["Tables"]["users"]["Row"];
 
 // Define all available columns
-type ColumnId = 
+type ColumnId =
   | "name"
   | "description"
   | "priority"
@@ -86,25 +76,25 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<ColumnId[]>(
-    columns.filter(column => column.defaultVisible).map(column => column.id)
+    columns
+      .filter((column) => column.defaultVisible)
+      .map((column) => column.id),
   );
 
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   // API hooks - all React hooks must be called unconditionally at the top level
   const utils = api.useUtils();
   const todoQuery = api.todo.find.useQuery(undefined, {
     refetchOnWindowFocus: true, // Refetch when window gets focus
-    refetchOnMount: true,      // Refetch when component mounts
-    refetchInterval: false,     // Don't auto-refetch at intervals
+    refetchOnMount: true, // Refetch when component mounts
+    refetchInterval: false, // Don't auto-refetch at intervals
   });
   const usersQuery = api.user.find.useQuery();
   const markCompletedMutation = api.todo.update.useMutation({
-    onSuccess: () => void utils.todo.find.invalidate()
+    onSuccess: () => void utils.todo.find.invalidate(),
   });
   const deleteMutation = api.todo.delete.useMutation({
-    onSuccess: () => void utils.todo.find.invalidate()
+    onSuccess: () => void utils.todo.find.invalidate(),
   });
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 
   // Client-side rendering effect
   useEffect(() => {
@@ -112,13 +102,13 @@ export default function Home() {
   }, []);
 
   // Derived data
-  const todos = (todoQuery.data ?? []) as Todo[];
-  const users = (usersQuery.data ?? []) as User[];
-  
+  const todos = useMemo(() => todoQuery.data ?? [], [todoQuery.data]);
+  const users = useMemo(() => usersQuery.data ?? [], [usersQuery.data]);
+
   // User map for looking up usernames from IDs
   const userMap = useMemo(() => {
     const map = new Map<string, string>();
-    users.forEach(user => {
+    users.forEach((user) => {
       map.set(user.id, user.username);
     });
     return map;
@@ -127,13 +117,17 @@ export default function Home() {
   // Filtered todos based on search query
   const filteredTodos = useMemo(() => {
     if (!searchQuery.trim()) return todos;
-    
+
     const query = searchQuery.toLowerCase().trim();
-    
-    return todos.filter(todo => {
-      const assigneeUsername = todo.assignee_id ? userMap.get(todo.assignee_id)?.toLowerCase() ?? "" : "";
-      const creatorUsername = todo.creator_id ? userMap.get(todo.creator_id)?.toLowerCase() ?? "" : "";
-      
+
+    return todos.filter((todo) => {
+      const assigneeUsername = todo.assignee_id
+        ? (userMap.get(todo.assignee_id)?.toLowerCase() ?? "")
+        : "";
+      const creatorUsername = todo.creator_id
+        ? (userMap.get(todo.creator_id)?.toLowerCase() ?? "")
+        : "";
+
       return (
         todo.name.toLowerCase().includes(query) ||
         (todo.description?.toLowerCase().includes(query) ?? false) ||
@@ -148,10 +142,10 @@ export default function Home() {
 
   // Column visibility functions
   const toggleColumn = (columnId: ColumnId) => {
-    setVisibleColumns(current => 
+    setVisibleColumns((current) =>
       current.includes(columnId)
-        ? current.filter(id => id !== columnId)
-        : [...current, columnId]
+        ? current.filter((id) => id !== columnId)
+        : [...current, columnId],
     );
   };
 
@@ -165,11 +159,11 @@ export default function Home() {
     try {
       await utils.todo.find.invalidate();
       // We want to get fresh data
-      const result = await todoQuery.refetch(); 
+      const result = await todoQuery.refetch();
       console.log("Refetch result:", {
         success: result.isSuccess,
         data: result.data,
-        dataLength: result.data?.length ?? 0
+        dataLength: result.data?.length ?? 0,
       });
     } catch (error) {
       console.error("Error refetching todos:", error);
@@ -183,7 +177,7 @@ export default function Home() {
   const markTaskCompleted = (todoId: string) => {
     markCompletedMutation.mutate({
       id: todoId,
-      status: "completed"
+      status: "completed",
     });
   };
 
@@ -200,10 +194,10 @@ export default function Home() {
   };
 
   const getPriorityBadge = (priority: string) => {
-    switch(priority.toLowerCase()) {
+    switch (priority.toLowerCase()) {
       case "high":
         return (
-          <span className="rounded-full bg-destructive/20 px-2.5 py-0.5 text-xs font-medium text-destructive">
+          <span className="bg-destructive/20 text-destructive rounded-full px-2.5 py-0.5 text-xs font-medium">
             High
           </span>
         );
@@ -225,7 +219,7 @@ export default function Home() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch(status.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case "pending":
         return (
           <span className="rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-500">
@@ -260,14 +254,23 @@ export default function Home() {
     console.log("Current todos:", todos);
     console.log("Current filtered todos:", filteredTodos);
     console.log("Current users:", users);
-    console.log("todoQuery status:", { 
-      isLoading: todoQuery.isLoading, 
-      isError: todoQuery.isError, 
+    console.log("todoQuery status:", {
+      isLoading: todoQuery.isLoading,
+      isError: todoQuery.isError,
       isFetching: todoQuery.isFetching,
       isSuccess: todoQuery.isSuccess,
-      dataUpdatedAt: todoQuery.dataUpdatedAt
+      dataUpdatedAt: todoQuery.dataUpdatedAt,
     });
-  }, [todos, filteredTodos, users, todoQuery.isLoading, todoQuery.isError, todoQuery.isFetching, todoQuery.dataUpdatedAt]);
+  }, [
+    todos,
+    filteredTodos,
+    users,
+    todoQuery.isLoading,
+    todoQuery.isError,
+    todoQuery.isFetching,
+    todoQuery.dataUpdatedAt,
+    todoQuery.isSuccess,
+  ]);
 
   // Handle SSR
   if (!mounted) {
@@ -281,27 +284,27 @@ export default function Home() {
         <meta name="description" content="T3 Todo List Application" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      <main className="min-h-screen bg-background p-6">
+      <main className="bg-background min-h-screen p-6">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex items-center justify-between">
-            <h1 className="text-4xl font-bold text-foreground">Todo List</h1>
+            <h1 className="text-foreground text-4xl font-bold">Todo List</h1>
             <ThemeToggle />
           </div>
-          
+
           <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row">
             <div className="relative w-full sm:w-96">
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
                 <Input
                   type="text"
                   placeholder="Search tasks..."
-                  className="w-full pl-9 pr-10"
+                  className="w-full pr-10 pl-9"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 {searchQuery && (
-                  <button 
-                    className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground hover:text-foreground"
+                  <button
+                    className="text-muted-foreground hover:text-foreground absolute top-2.5 right-2.5 h-4 w-4"
                     onClick={clearSearch}
                   >
                     <X className="h-4 w-4" />
@@ -310,12 +313,13 @@ export default function Home() {
                 )}
               </div>
               {searchQuery && (
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Found {filteredTodos.length} {filteredTodos.length === 1 ? 'result' : 'results'}
+                <div className="text-muted-foreground mt-1 text-sm">
+                  Found {filteredTodos.length}{" "}
+                  {filteredTodos.length === 1 ? "result" : "results"}
                 </div>
               )}
             </div>
-            
+
             <div className="flex gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -338,11 +342,11 @@ export default function Home() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              
+
               <AddTaskDialog onTaskAdded={handleTaskAdded} />
             </div>
           </div>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Tasks</CardTitle>
@@ -362,7 +366,16 @@ export default function Home() {
                 </div>
               ) : filteredTodos.length === 0 ? (
                 <div className="flex justify-center py-8">
-                  <p>No tasks match your search. Try a different query or <button onClick={clearSearch} className="text-primary hover:underline">clear the search</button>.</p>
+                  <p>
+                    No tasks match your search. Try a different query or{" "}
+                    <button
+                      onClick={clearSearch}
+                      className="text-primary hover:underline"
+                    >
+                      clear the search
+                    </button>
+                    .
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-md border">
@@ -370,14 +383,30 @@ export default function Home() {
                     <TableHeader>
                       <TableRow>
                         {isColumnVisible("name") && <TableHead>Name</TableHead>}
-                        {isColumnVisible("description") && <TableHead>Description</TableHead>}
-                        {isColumnVisible("priority") && <TableHead>Priority</TableHead>}
-                        {isColumnVisible("status") && <TableHead>Status</TableHead>}
-                        {isColumnVisible("storyPoints") && <TableHead>Story Points</TableHead>}
-                        {isColumnVisible("dueDate") && <TableHead>Due Date</TableHead>}
-                        {isColumnVisible("assignee") && <TableHead>Assignee</TableHead>}
-                        {isColumnVisible("creator") && <TableHead>Creator</TableHead>}
-                        {isColumnVisible("createdAt") && <TableHead>Created At</TableHead>}
+                        {isColumnVisible("description") && (
+                          <TableHead>Description</TableHead>
+                        )}
+                        {isColumnVisible("priority") && (
+                          <TableHead>Priority</TableHead>
+                        )}
+                        {isColumnVisible("status") && (
+                          <TableHead>Status</TableHead>
+                        )}
+                        {isColumnVisible("storyPoints") && (
+                          <TableHead>Story Points</TableHead>
+                        )}
+                        {isColumnVisible("dueDate") && (
+                          <TableHead>Due Date</TableHead>
+                        )}
+                        {isColumnVisible("assignee") && (
+                          <TableHead>Assignee</TableHead>
+                        )}
+                        {isColumnVisible("creator") && (
+                          <TableHead>Creator</TableHead>
+                        )}
+                        {isColumnVisible("createdAt") && (
+                          <TableHead>Created At</TableHead>
+                        )}
                         <TableHead className="w-[50px]"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -385,13 +414,17 @@ export default function Home() {
                       {filteredTodos.map((todo) => (
                         <TableRow key={todo.id}>
                           {isColumnVisible("name") && (
-                            <TableCell className="font-medium">{todo.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {todo.name}
+                            </TableCell>
                           )}
                           {isColumnVisible("description") && (
                             <TableCell>{todo.description ?? "N/A"}</TableCell>
                           )}
                           {isColumnVisible("priority") && (
-                            <TableCell>{getPriorityBadge(todo.priority)}</TableCell>
+                            <TableCell>
+                              {getPriorityBadge(todo.priority)}
+                            </TableCell>
                           )}
                           {isColumnVisible("status") && (
                             <TableCell>{getStatusBadge(todo.status)}</TableCell>
@@ -404,7 +437,9 @@ export default function Home() {
                           )}
                           {isColumnVisible("assignee") && (
                             <TableCell>
-                              {todo.assignee_id ? userMap.get(todo.assignee_id) ?? "Unknown" : "Unassigned"}
+                              {todo.assignee_id
+                                ? (userMap.get(todo.assignee_id) ?? "Unknown")
+                                : "Unassigned"}
                             </TableCell>
                           )}
                           {isColumnVisible("creator") && (
@@ -426,7 +461,9 @@ export default function Home() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => markTaskCompleted(todo.id)}>
+                                <DropdownMenuItem
+                                  onClick={() => markTaskCompleted(todo.id)}
+                                >
                                   <CheckCircle2 className="mr-2 h-4 w-4" />
                                   <span>Mark completed</span>
                                 </DropdownMenuItem>
@@ -434,7 +471,7 @@ export default function Home() {
                                   <Pencil className="mr-2 h-4 w-4" />
                                   <span>Edit</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem 
+                                <DropdownMenuItem
                                   onClick={() => deleteTask(todo.id)}
                                   className="text-destructive focus:text-destructive"
                                 >
